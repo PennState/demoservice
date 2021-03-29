@@ -23,6 +23,6 @@ RUN apk update \
 # work-around for ipv6 localhost
 COPY ./nsswitch.conf /etc/nsswitch.conf
 
-COPY ./demoservice /usr/local/bin/demoservice
+COPY ./main /usr/local/bin/demoservice
 
 ENTRYPOINT ["demoservice"]
