@@ -3,7 +3,10 @@ package main
 import (
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -23,6 +26,7 @@ func main() {
 
 	// Routes
 	e.GET("/foo", foo)
+	e.GET("/bar", bar)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":8080"))
@@ -31,7 +35,7 @@ func main() {
 func foo(c echo.Context) error {
 	log.Infof("Handling Request from: %s", c.Path())
 
-	linksEnv := os.Getenv("DEMO_LINKS")
+	linksEnv := os.Getenv("FOO_LINKS")
 	links := strings.Split(linksEnv, "|")
 
 	for _, l := range links {
@@ -44,6 +48,23 @@ func foo(c echo.Context) error {
 			return c.String(resp.StatusCode, err.Error())
 		}
 	}
+
+	return c.String(http.StatusOK, "Success")
+}
+
+var mux sync.Mutex
+
+func bar(c echo.Context) error {
+	mux.Lock()
+	defer mux.Unlock()
+
+	timeout := os.Getenv("BAR_TIMEOUT")
+	t, err := strconv.Atoi(timeout)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+
+	time.Sleep(time.Duration(t) * time.Millisecond)
 
 	return c.String(http.StatusOK, "Success")
 }
