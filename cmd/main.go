@@ -36,9 +36,12 @@ func foo(c echo.Context) error {
 
 	for _, l := range links {
 		log.Infof("Requesting: %s", l)
-		_, err := http.Get(l)
+		resp, err := http.Get(l)
 		if err != nil {
 			return c.String(http.StatusInternalServerError, err.Error())
+		}
+		if resp.StatusCode != http.StatusOK {
+			return c.String(resp.StatusCode, err.Error())
 		}
 	}
 
