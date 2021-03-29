@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -15,7 +16,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	initalized bool
+	failures   int
+	lastSeen   time.Time
+)
+
 func main() {
+
+	initalized = false
+	lastSeen = time.Now()
+	failures = 0
+
 	e := echo.New()
 
 	// Middleware
@@ -28,6 +40,7 @@ func main() {
 	e.GET("/foo", foo)
 	e.GET("/bar", bar)
 	e.GET("/baz", baz)
+	e.GET("/delay", delay)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":8080"))
@@ -80,4 +93,76 @@ func baz(c echo.Context) error {
 	time.Sleep(time.Duration(t) * time.Millisecond)
 
 	return c.String(http.StatusOK, "Success")
+}
+
+func delay(c echo.Context) error {
+	err := sleep(c)
+
+	if err != nil {
+		return err
+	}
+
+	return c.String(http.StatusOK, "Success")
+}
+
+func sleep(c echo.Context) error {
+	mux.Lock()
+	defer mux.Unlock()
+
+	now := time.Now()
+
+	if !initalized {
+		lastSeen = now
+		initalized = true
+	}
+
+	log.Printf("%v\n%v\n", lastSeen, now)
+
+	d := now.Sub(lastSeen).Milliseconds()
+	log.Printf("d = %d\n", d)
+
+	if d < 1000 {
+		r := rand.Intn(3)
+		dur := time.Duration(r)
+		log.Println("500")
+		log.Printf("factor: %d\n", r)
+		st := 500 * dur * time.Millisecond
+		log.Printf("Sleeping %v\n", st.Seconds())
+		time.Sleep(st)
+	} else if d < 1500 && d > 1000 {
+		r := rand.Intn(2) + 2
+		dur := time.Duration(r)
+		log.Printf("factor: %d\n", r)
+		st := 500 * dur * time.Millisecond
+		log.Printf("Sleeping %v\n", st.Seconds())
+		time.Sleep(st)
+	} else if d < 2000 && d > 1500 {
+		r := rand.Intn(3) + 3
+		log.Printf("factor: %d\n", r)
+		dur := time.Duration(r)
+		st := 500 * dur * time.Millisecond
+		log.Printf("Sleeping %v\n", st.Seconds())
+		time.Sleep(st)
+	} else if d < 3000 && d > 2000 {
+		r := rand.Intn(3) + 5
+		log.Printf("factor: %d\n", r)
+		dur := time.Duration(r)
+		st := 500 * dur * time.Millisecond
+		log.Printf("Sleeping %v\n", st.Seconds())
+		time.Sleep(st)
+	} else {
+		failures++
+
+		log.Printf("Failures: %d\n", failures)
+		//Reset if we see 5 failures
+		if failures > 5 {
+			failures = 0
+			lastSeen = now
+		}
+
+		return c.String(http.StatusRequestTimeout, "Timout")
+	}
+
+	lastSeen = now
+	return nil
 }
