@@ -27,6 +27,7 @@ func main() {
 	// Routes
 	e.GET("/foo", foo)
 	e.GET("/bar", bar)
+	e.GET("/baz", baz)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":8080"))
@@ -59,6 +60,18 @@ func bar(c echo.Context) error {
 	defer mux.Unlock()
 
 	timeout := os.Getenv("BAR_TIMEOUT")
+	t, err := strconv.Atoi(timeout)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+
+	time.Sleep(time.Duration(t) * time.Millisecond)
+
+	return c.String(http.StatusOK, "Success")
+}
+
+func baz(c echo.Context) error {
+	timeout := os.Getenv("BAZ_TIMEOUT")
 	t, err := strconv.Atoi(timeout)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
